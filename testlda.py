@@ -1,9 +1,11 @@
 import mock
+import sys
 import unittest
 
 import numpy as np
 import numpy.testing as nptest
 
+import __main__
 from lda import *
 
 # Sample corpus for validating calculations
@@ -20,13 +22,27 @@ corpus = np.array([
     [0,0,1,0,0,0,0,0,1,0,0,0,0,1],
     [1,0,0,0,0,1,0,1,0,1,0,0,1,0]
 ])
+corpus_words = [
+    [1,2,4,5,6,7,7,7,9,11,12,13]
+    , [2,3,7,10]
+    , [2,8,13]
+    , [0,5,7,9,12]
+]
+
+# Stub for numpy.randint over [0,3)
+def stub_randint(min, max):
+    stub_randint.count += 1
+    val = [1,2,1,1,0,0,0,2,2,1,1,0, 1,2,1,0, 0,1,1, 0,2,2,2,0]
+    return val[stub_randint.count]
+stub_randint.count = -1
 
 class UtilTest(unittest.TestCase):
     
     def test_word_iter(self):
         '''Test iterating the words in the first document of the corpus.'''
-        words = [1,2,4,5,6,7,7,7,9,11,12,13]
-        self.assertEqual(list(word_iter(corpus[0,:])), words)
+        for m, correct_words in enumerate(corpus_words):
+            words = list(word_iter(corpus[m,:]))
+            self.assertEqual(words, correct_words)
 
 class LdaInitTest(unittest.TestCase):
     
@@ -56,6 +72,33 @@ class LdaInitTest(unittest.TestCase):
         eta = np.ones(num_topics) * 0.1
         nptest.assert_array_equal(lda.alpha, alpha)
         nptest.assert_array_equal(lda.eta, eta)
+
+class LdaGibbsTest(unittest.TestCase):
     
+    def setUp(self):
+        self.lda = LdaModel(3)
+
+    def test_gibbs_init(self):
+        # Use random stub
+        tmp = __main__.nprand.randint
+        __main__.nprand.randint = stub_randint
+        try:
+            stats = self.lda._gibbs_init(corpus)
+            # Hand-calculated stats based on random stub
+            nmk = np.array([[4,5,3], [1,2,1], [1,2,0], [2, 0, 3]])
+            nm = np.array([12, 4, 3, 5])
+            nkw = np.array([
+                [1,0,1,0,0,0,1,2,0,0,1,0,1,1],
+                [0,1,1,0,1,1,0,1,1,0,0,1,1,1],
+                [0,0,1,1,0,1,0,2,0,2,0,0,0,0]
+            ])
+            nk = np.array([8, 9, 7])
+            nptest.assert_array_equal(nmk, stats['nmk'])
+            nptest.assert_array_equal(nm, stats['nm'])
+            nptest.assert_array_equal(nkw, stats['nkw'])
+            nptest.assert_array_equal(nk, stats['nk'])
+        finally:
+            __main__.nprand.randint = tmp
+            
 if __name__ == '__main__':
     unittest.main()

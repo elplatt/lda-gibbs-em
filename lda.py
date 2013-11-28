@@ -5,6 +5,7 @@ Latent Dirichlet Allocation
 import math
 
 import numpy as np
+import numpy.random as nprand
 import scipy as sp
 import scipy.misc as spmisc
 
@@ -42,7 +43,7 @@ class LdaModel(object):
         except TypeError:
             self.eta = np.ones(num_topics)*eta
         
-    def _gibbs_init(corpus):
+    def _gibbs_init(self, corpus):
         '''Initialize Gibbs sampling by assigning a random topic to each word in
             the corpus.
         :param corpus: corpus[m][w] is the count for word w in document m
@@ -55,17 +56,17 @@ class LdaModel(object):
         num_docs, num_words = corpus.shape
         # Initialize stats
         stats = {
-            'nmk': np.zeros((num_docs, num_words))
+            'nmk': np.zeros((num_docs, self.num_topics))
             , 'nm': np.zeros(num_docs)
             , 'nkw': np.zeros((self.num_topics, num_words))
             , 'nk': np.zeros(self.num_topics)
         }
         for m in xrange(num_docs):
             for w in word_iter(corpus[m,:]):
-                # Sample topic from multinomial
-                k = sample_multinomial(np.ones(self.num_topics) / self.num_topics)
-                nmk[m][k] += 1
-                nm += 1
-                nkw[k][w] += 1
-                nk[k] += 1
+                # Sample topic from uniform distribution
+                k = nprand.randint(0, self.num_topics)
+                stats['nmk'][m][k] += 1
+                stats['nm'][m] += 1
+                stats['nkw'][k][w] += 1
+                stats['nk'][k] += 1
         return stats
