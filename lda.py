@@ -8,6 +8,14 @@ import numpy as np
 import scipy as sp
 import scipy.misc as spmisc
 
+def word_iter(doc):
+    '''Return an iterator over words in a document.
+    :param doc: doc[w] is the number of times word w appears
+    '''
+    for w, count in enumerate(doc):
+        for i in xrange(count):
+            yield w
+
 class LdaModel(object):
     
     def __init__(self, num_topics, alpha=0.1, eta=0.1):
@@ -34,3 +42,30 @@ class LdaModel(object):
         except TypeError:
             self.eta = np.ones(num_topics)*eta
         
+    def _gibbs_init(corpus):
+        '''Initialize Gibbs sampling by assigning a random topic to each word in
+            the corpus.
+        :param corpus: corpus[m][w] is the count for word w in document m
+        :returns: statistics dict with the following keys:
+            nmk: document-topic count, nmk[m][k] is for document m, topic k
+            nm: document-topic sum, nm[m] is the number of words in document m
+            nkw: topic-term count, nkw[k][w] is for word w in topic k
+            nk: topic-term sum, nk[k] is the count of topic k in corpus
+        '''
+        num_docs, num_words = corpus.shape
+        # Initialize stats
+        stats = {
+            'nmk': np.zeros((num_docs, num_words))
+            , 'nm': np.zeros(num_docs)
+            , 'nkw': np.zeros((self.num_topics, num_words))
+            , 'nk': np.zeros(self.num_topics)
+        }
+        for m in xrange(num_docs):
+            for w in word_iter(corpus[m,:]):
+                # Sample topic from multinomial
+                k = sample_multinomial(np.ones(self.num_topics) / self.num_topics)
+                nmk[m][k] += 1
+                nm += 1
+                nkw[k][w] += 1
+                nk[k] += 1
+        return stats
