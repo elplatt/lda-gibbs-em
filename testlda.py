@@ -59,37 +59,35 @@ class UtilTest(unittest.TestCase):
 
 class LdaInitTest(unittest.TestCase):
     
-    def SetUp(self):
-        pass
+    def setUp(self):
+        self.num_topics = 10
+        self.vocab_size = 14
     
     def test_init_scalar(self):
-        num_topics = 10
         alpha = 0.2
         eta = 0.3
-        lda = LdaModel(num_topics, alpha, eta)
-        nptest.assert_array_equal(lda.alpha, np.ones(num_topics)*alpha)
-        nptest.assert_array_equal(lda.eta, np.ones(num_topics)*eta)
+        lda = LdaModel(corpus, self.num_topics, alpha, eta)
+        nptest.assert_array_equal(lda.alpha, np.ones(self.num_topics)*alpha)
+        nptest.assert_array_equal(lda.eta, np.ones(self.vocab_size)*eta)
     
     def test_init_vector(self):
-        num_topics = 10
-        alpha = np.ones(num_topics) * 0.2
-        eta = np.ones(num_topics) * 0.3
-        lda = LdaModel(num_topics, alpha, eta)
+        alpha = np.ones(self.num_topics) * 0.2
+        eta = np.ones(self.vocab_size) * 0.3
+        lda = LdaModel(corpus, self.num_topics, alpha, eta)
         nptest.assert_array_equal(lda.alpha, alpha)
         nptest.assert_array_equal(lda.eta, eta)
     
     def test_init_default(self):
-        num_topics = 10
-        lda = LdaModel(num_topics)
-        alpha = np.ones(num_topics) * 0.1
-        eta = np.ones(num_topics) * 0.1
+        lda = LdaModel(corpus, self.num_topics)
+        alpha = np.ones(self.num_topics) * 0.1
+        eta = np.ones(self.vocab_size) * 0.1
         nptest.assert_array_equal(lda.alpha, alpha)
         nptest.assert_array_equal(lda.eta, eta)
 
 class LdaGibbsTest(unittest.TestCase):
     
     def setUp(self):
-        self.lda = LdaModel(3)
+        self.lda = LdaModel(corpus, 3)
 
     def test_gibbs_init(self):
         # Use random stub

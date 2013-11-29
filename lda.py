@@ -19,9 +19,10 @@ def word_iter(doc):
 
 class LdaModel(object):
     
-    def __init__(self, num_topics, alpha=0.1, eta=0.1):
+    def __init__(self, training, num_topics, alpha=0.1, eta=0.1):
         '''Creates an LDA model.
         
+        :param training: training corpus as (num_doc, vocab_size) array
         :param num_topics: number of topics
         :param alpha: document-topic dirichlet parameter, scalar or array,
             defaults to 0.1
@@ -29,7 +30,7 @@ class LdaModel(object):
             defaults to 0.1
         '''
         self.num_topics = num_topics
-        # Validate alpha, eta and convert to array if necessary
+        # Validate alpha and eta, and convert to array if necessary
         try:
             if len(alpha) != num_topics:
                 raise ValueError("alpha must be a number or a num_topic-length vector")
@@ -37,11 +38,11 @@ class LdaModel(object):
         except TypeError:
             self.alpha = np.ones(num_topics)*alpha
         try:
-            if len(eta) != num_topics:
-                raise ValueError("eta must be a number or a num_topic-length vector")
+            if len(eta) != training.shape[1]:
+                raise ValueError("eta must be a number or a vocab_size-length vector")
             self.eta = eta
         except TypeError:
-            self.eta = np.ones(num_topics)*eta
+            self.eta = np.ones(training.shape[1])
         
     def _gibbs_init(self, corpus):
         '''Initialize Gibbs sampling by assigning a random topic to each word in
