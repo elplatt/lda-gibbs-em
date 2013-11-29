@@ -42,7 +42,7 @@ class LdaModel(object):
                 raise ValueError("eta must be a number or a vocab_size-length vector")
             self.eta = eta
         except TypeError:
-            self.eta = np.ones(training.shape[1])
+            self.eta = np.ones(training.shape[1])*eta
         
     def _gibbs_init(self, corpus):
         '''Initialize Gibbs sampling by assigning a random topic to each word in
@@ -81,7 +81,7 @@ class LdaModel(object):
         :returns: a (num_topics) length vector of topic probabilities
         '''
         pk = stats['nkw'][:,w].copy() + self.eta[w]
-        pk = np.multipy(pk, stats['nmk'][m,:] + self.alpha)
+        pk = np.multiply(pk, stats['nmk'][m,:] + self.alpha)
         pk = np.divide(pk, stats['nk'] + self.eta.sum())
         # Normalize
         pk /= pk.sum()
