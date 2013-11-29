@@ -40,7 +40,8 @@ stats = {
     , 'nk': np.array([8, 9, 7])
 }
 # Hand-calculated conditional for m=0, w=7
-topic_cond = np.array([2.1*4.1/9.05, 1.2*5.2/10.05, 2.3*3.3/8.05])
+topic_cond = np.array([2.08*4.1/9.05, 1.08*5.2/10.05, 2.08*3.3/8.05])
+topic_cond /= topic_cond.sum()
 
 # Stub for numpy.randint over [0,3)
 def stub_randint(min, max):
@@ -87,7 +88,11 @@ class LdaInitTest(unittest.TestCase):
 class LdaGibbsTest(unittest.TestCase):
     
     def setUp(self):
-        self.lda = LdaModel(corpus, 3)
+        num_topics = 3
+        vocab_size = 14
+        alpha = np.array([0.1, 0.2, 0.3])
+        eta = np.array(range(1, vocab_size+1)) / 100.0
+        self.lda = LdaModel(corpus, num_topics, alpha, eta)
 
     def test_gibbs_init(self):
         # Use random stub

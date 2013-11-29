@@ -80,7 +80,7 @@ class LdaModel(object):
         :param stats: count statistics (with topic being sampled removed)
         :returns: a (num_topics) length vector of topic probabilities
         '''
-        pk = stats['nkw'][:,w].copy() + self.eta[w]
+        pk = stats['nkw'][:,w] + self.eta[w]
         pk = np.multiply(pk, stats['nmk'][m,:] + self.alpha)
         pk = np.divide(pk, stats['nk'] + self.eta.sum())
         # Normalize
