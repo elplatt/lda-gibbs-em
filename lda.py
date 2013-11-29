@@ -70,3 +70,18 @@ class LdaModel(object):
                 stats['nkw'][k][w] += 1
                 stats['nk'][k] += 1
         return stats
+    
+    def topic_conditional(self, m, w, stats):
+        '''Distribution of a single topic given others and words.
+        
+        :param m: index of the document to sample for
+        :param w: word associated with the topic being sampled
+        :param stats: count statistics (with topic being sampled removed)
+        :returns: a (num_topics) length vector of topic probabilities
+        '''
+        pk = stats['nkw'][:,w].copy() + self.eta[w]
+        pk = np.multipy(pk, stats['nmk'][m,:] + self.alpha)
+        pk = np.divide(pk, stats['nk'] + self.eta.sum())
+        # Normalize
+        pk /= pk.sum()
+        return pk

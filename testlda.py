@@ -28,6 +28,19 @@ corpus_words = [
     , [2,8,13]
     , [0,5,7,9,12]
 ]
+# Hand-calculated stats based on random stub
+stats = {
+    'nmk': np.array([[4,5,3], [1,2,1], [1,2,0], [2, 0, 3]])
+    ,'nm': np.array([12, 4, 3, 5])
+    ,'nkw': np.array([
+        [1,0,1,0,0,0,1,2,0,0,1,0,1,1],
+        [0,1,1,0,1,1,0,1,1,0,0,1,1,1],
+        [0,0,1,1,0,1,0,2,0,2,0,0,0,0]
+    ])
+    , 'nk': np.array([8, 9, 7])
+}
+# Hand-calculated conditional for m=0, w=7
+topic_cond = np.array([2.1*4.1/9.05, 1.2*5.2/10.05, 2.3*3.3/8.05])
 
 # Stub for numpy.randint over [0,3)
 def stub_randint(min, max):
@@ -83,22 +96,21 @@ class LdaGibbsTest(unittest.TestCase):
         tmp = __main__.nprand.randint
         __main__.nprand.randint = stub_randint
         try:
-            stats = self.lda._gibbs_init(corpus)
-            # Hand-calculated stats based on random stub
-            nmk = np.array([[4,5,3], [1,2,1], [1,2,0], [2, 0, 3]])
-            nm = np.array([12, 4, 3, 5])
-            nkw = np.array([
-                [1,0,1,0,0,0,1,2,0,0,1,0,1,1],
-                [0,1,1,0,1,1,0,1,1,0,0,1,1,1],
-                [0,0,1,1,0,1,0,2,0,2,0,0,0,0]
-            ])
-            nk = np.array([8, 9, 7])
-            nptest.assert_array_equal(nmk, stats['nmk'])
-            nptest.assert_array_equal(nm, stats['nm'])
-            nptest.assert_array_equal(nkw, stats['nkw'])
-            nptest.assert_array_equal(nk, stats['nk'])
+            test_stats = self.lda._gibbs_init(corpus)
+            nptest.assert_array_equal(test_stats['nmk'], stats['nmk'])
+            nptest.assert_array_equal(test_stats['nm'], stats['nm'])
+            nptest.assert_array_equal(test_stats['nkw'], stats['nkw'])
+            nptest.assert_array_equal(test_stats['nk'], stats['nk'])
         finally:
             __main__.nprand.randint = tmp
+            
+    def test_topic_conditional(self):
+        test_cond = self.lda.topic_conditional(0, 7, stats)
+        nptest.assert_allclose(test_cond, topic_cond)
+    
+    def test_topic_conditional_norm(self):
+        test_cond = self.lda.topic_conditional(0, 7, stats)
+        self.assertAlmostEqual(test_cond.sum(), 1.0)
             
 if __name__ == '__main__':
     unittest.main()
