@@ -17,6 +17,16 @@ def word_iter(doc):
         for i in xrange(count):
             yield w
 
+def sample(dist):
+    '''Sample from the given distribution.
+    
+    :param dist: array of probabilities
+    :returns: a randomly sampled integer in [0, len(dist))
+    '''
+    cdf = np.cumsum(dist)
+    uniform = nprand.random_sample()
+    return next(n for n in range(0, len(cdf)) if cdf[n] > uniform)
+
 class LdaModel(object):
     
     def __init__(self, training, num_topics, alpha=0.1, eta=0.1):

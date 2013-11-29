@@ -50,6 +50,13 @@ def stub_randint(min, max):
     return val[stub_randint.count]
 stub_randint.count = -1
 
+# Stub for numpy.random_sample
+def stub_random_sample():
+    stub_random_sample.count += 1
+    val = [0.1, 0.3, 0.5, 0.7, 0.9]
+    return val[stub_random_sample.count]
+stub_random_sample.count = -1
+
 class UtilTest(unittest.TestCase):
     
     def test_word_iter(self):
@@ -57,6 +64,18 @@ class UtilTest(unittest.TestCase):
         for m, correct_words in enumerate(corpus_words):
             words = list(word_iter(corpus[m,:]))
             self.assertEqual(words, correct_words)
+            
+    def test_sample(self):
+        '''Test sampling from a discrete distribution'''
+        tmp = __main__.nprand.random_sample
+        __main__.nprand.random_sample = stub_random_sample
+        try:
+            dist = np.array([0.5, 0.25, 0.125, 0.125])
+            samples = [0, 0, 1, 1, 3]
+            test_samples = [sample(dist) for i in range(5)]
+            nptest.assert_array_equal(test_samples, samples)
+        finally:
+            __main__.nprand.random_sample = tmp
 
 class LdaInitTest(unittest.TestCase):
     
