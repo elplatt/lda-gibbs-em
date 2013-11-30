@@ -179,9 +179,9 @@ class LdaEmTest(unittest.TestCase):
         self.lda = LdaModel(corpus, num_topics, stub_alpha, stub_eta)
         self.lda.stats = stats
     
-    def test_em_alpha(self):
+    def test_m_alpha(self):
         new_alpha = np.array([0.1*42.63, 0.2*18.5, 0.3*12.42]) / 12.83
-        self.lda._em_alpha(1)
+        self.lda._m_alpha(1)
         nptest.assert_allclose(self.lda.alpha, new_alpha, rtol=1e-2)
 
 if __name__ == '__main__':

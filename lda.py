@@ -57,6 +57,13 @@ class LdaModel(object):
         # Initialize gibbs sampler
         self.stats = self._gibbs_init(training)
     
+    def e_step(self, gibbs_iter=50):
+        for i in range(gibbs_iter):
+            self._gibbs_sample(self.stats)
+            
+    def m_step(self):
+        self._m_alpha()
+    
     def beta(self):
         '''Per-topic word distributions as a (num_topics, vocab_size) array.'''
         result = self.stats['nkw'] + self.eta
@@ -122,7 +129,7 @@ class LdaModel(object):
             stats['nk'][k] += 1
             stats['topics'][(m, i)] = (w, k)
     
-    def _em_alpha(self, iterations=5):
+    def _m_alpha(self, iterations=5):
         '''Find a new estimate for alpha that maximizes likelihood.
         
         :param iterations: The number of iterations to perform, defaults to 5
