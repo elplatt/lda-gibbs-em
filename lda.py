@@ -53,7 +53,15 @@ class LdaModel(object):
             self.eta = eta
         except TypeError:
             self.eta = np.ones(training.shape[1])*eta
-        
+        # Initialize gibbs sampler
+        self.stats = self._gibbs_init(training)
+    
+    def beta(self):
+        '''Per-topic word distributions as a (num_topics, vocab_size) array.'''
+        result = self.stats['nkw'] + self.eta
+        result = np.divide(result, result.sum(1)[:,np.newaxis])
+        return result
+    
     def _gibbs_init(self, corpus):
         '''Initialize Gibbs sampling by assigning a random topic to each word in
             the corpus.

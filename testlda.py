@@ -39,9 +39,23 @@ stats = {
     ])
     , 'nk': np.array([8, 9, 7])
 }
+# Hyperparameters used in hand-calculations
+stub_alpha = np.array([0.1, 0.2, 0.3])
+stub_eta = np.array(range(1, 4)) / 100.0
+
 # Hand-calculated conditional for m=0, w=7
 topic_cond = np.array([2.08*4.1/9.05, 1.08*5.2/10.05, 2.08*3.3/8.05])
 topic_cond /= topic_cond.sum()
+
+# Hand-calculated per-topic word distributions
+beta = np.array([
+    np.array([1.01, 0.02, 1.03, 0.04, 0.05, 0.06, 1.07,
+              2.08, 0.09, 0.10, 1.11, 0.12, 1.13, 1.14]) / 9.05,
+    np.array([0.01, 1.02, 1.03, 0.04, 1.05, 1.06, 0.07,
+              1.08, 1.09, 0.10, 0.11, 1.12, 1.13, 1.14]) / 10.05,
+    np.array([0.01, 0.02, 1.03, 1.04, 0.05, 1.06, 0.07,
+              2.08, 0.09, 2.10, 0.11, 0.12, 0.13, 0.14]) / 8.05
+])
 
 # Stub for numpy.randint over [0,3)
 def stub_randint(min, max):
@@ -103,6 +117,20 @@ class LdaInitTest(unittest.TestCase):
         eta = np.ones(self.vocab_size) * 0.1
         nptest.assert_array_equal(lda.alpha, alpha)
         nptest.assert_array_equal(lda.eta, eta)
+
+class LdaBetaThetaTest(unittest.TestCase):
+    
+    def setUp(self):
+        num_topics = 3
+        vocab_size = 14
+        alpha = np.array([0.1, 0.2, 0.3])
+        eta = np.array(range(1, vocab_size+1)) / 100.0
+        self.lda = LdaModel(corpus, num_topics, alpha, eta)
+        self.lda.stats = stats
+    
+    def test_beta(self):
+        test_beta = self.lda.beta()
+        nptest.assert_allclose(test_beta, beta)
 
 class LdaGibbsTest(unittest.TestCase):
     
