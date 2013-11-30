@@ -1,9 +1,13 @@
 import mock
+import os
 import sys
 import unittest
 
 import numpy as np
 import numpy.testing as nptest
+
+# Add parent dir to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 import __main__
 from lda import *
