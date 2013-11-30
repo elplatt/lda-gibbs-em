@@ -45,7 +45,7 @@ stats = {
 }
 # Hyperparameters used in hand-calculations
 stub_alpha = np.array([0.1, 0.2, 0.3])
-stub_eta = np.array(range(1, 4)) / 100.0
+stub_eta = np.array(range(1, 15)) / 100.0
 
 # Hand-calculated conditional for m=0, w=7
 topic_cond = np.array([2.08*4.1/9.05, 1.08*5.2/10.05, 2.08*3.3/8.05])
@@ -170,6 +170,19 @@ class LdaGibbsTest(unittest.TestCase):
         # Run sampler to test for runtime errors
         stats = self.lda._gibbs_init(corpus)
         self.lda._gibbs_sample(stats)
-        
+
+class LdaEmTest(unittest.TestCase):
+    
+    def setUp(self):
+        num_topics = 3
+        vocab_size = 14
+        self.lda = LdaModel(corpus, num_topics, stub_alpha, stub_eta)
+        self.lda.stats = stats
+    
+    def test_em_alpha(self):
+        new_alpha = np.array([0.1*42.63, 0.2*18.5, 0.3*12.42]) / 12.83
+        self.lda._em_alpha(1)
+        nptest.assert_allclose(self.lda.alpha, new_alpha, rtol=1e-2)
+
 if __name__ == '__main__':
     unittest.main()

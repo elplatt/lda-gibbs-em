@@ -8,6 +8,7 @@ import numpy as np
 import numpy.random as nprand
 import scipy as sp
 import scipy.misc as spmisc
+import scipy.special as spspecial
 
 def word_iter(doc):
     '''Return an iterator over words in a document.
@@ -120,6 +121,32 @@ class LdaModel(object):
             stats['nkw'][k][w] += 1
             stats['nk'][k] += 1
             stats['topics'][(m, i)] = (w, k)
+    
+    def _em_alpha(self, iterations=5):
+        '''Find a new estimate for alpha that maximizes likelihood.
+        
+        :param iterations: The number of iterations to perform, defaults to 5
+        '''
+        alpha = self.alpha
+        stats = self.stats
+        num_topics = alpha.shape[0]
+        num_docs = stats['nmk'].shape[0]
+        for i in range(iterations):
+            # Heinrich2009 Eq. 83
+            new = np.zeros(num_topics)
+            alphasum = alpha.sum()
+            den = 0
+            for m in range(num_docs):
+                den += spspecial.psi(stats['nm'][m] + alphasum)
+            den -= num_docs*spspecial.psi(alphasum)
+            for k in range(num_topics):
+                for m in range(num_docs):
+                    new[k] += spspecial.psi(stats['nmk'][m,k] + alpha[k])
+                new[k] -= num_docs * spspecial.psi(alpha[k])
+                new[k] /= den
+                new[k] *= alpha[k]
+            alpha = new
+        self.alpha = alpha
     
     def topic_conditional(self, m, w, stats):
         '''Distribution of a single topic given others and words.
