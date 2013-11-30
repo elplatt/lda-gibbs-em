@@ -63,6 +63,8 @@ class LdaModel(object):
             nm: document-topic sum, nm[m] is the number of words in document m
             nkw: topic-term count, nkw[k][w] is for word w in topic k
             nk: topic-term sum, nk[k] is the count of topic k in corpus
+            n: total number of words
+            topics: list of pairs (m, i) giving the topic for each word
         '''
         num_docs, num_words = corpus.shape
         # Initialize stats
@@ -71,16 +73,45 @@ class LdaModel(object):
             , 'nm': np.zeros(num_docs)
             , 'nkw': np.zeros((self.num_topics, num_words))
             , 'nk': np.zeros(self.num_topics)
+            , 'n': 0
+            , 'topics': {}
         }
         for m in xrange(num_docs):
-            for w in word_iter(corpus[m,:]):
+            for i, w in enumerate(word_iter(corpus[m,:])):
                 # Sample topic from uniform distribution
                 k = nprand.randint(0, self.num_topics)
                 stats['nmk'][m][k] += 1
                 stats['nm'][m] += 1
                 stats['nkw'][k][w] += 1
                 stats['nk'][k] += 1
+                stats['n'] += 1
+                stats['topics'][(m, i)] = (w, k)
         return stats
+    
+    def _gibbs_sample(self, stats):
+        '''Resample topics for each word using Gibbs sampling.
+        
+        :param stats: statistics returned by _gibbs_init(), will be modified.
+        '''
+        # Shuffle topic assignments
+        topics = stats['topics'].keys()
+        nprand.shuffle(topics)
+        # Resample each one
+        for m, i in topics:
+            # Remove doc m, word i from stats
+            w, k = stats['topics'][(m, i)]
+            stats['nmk'][m][k] -= 1
+            stats['nm'][m] -= 1
+            stats['nkw'][k][w] -= 1
+            stats['nk'][k] -= 1
+            # Sample from conditional
+            k = sample(self.topic_conditional(m, w, stats))
+            # Add new topic to stats
+            stats['nmk'][m][k] += 1
+            stats['nm'][m] += 1
+            stats['nkw'][k][w] += 1
+            stats['nk'][k] += 1
+            stats['topics'][(m, i)] = (w, k)
     
     def topic_conditional(self, m, w, stats):
         '''Distribution of a single topic given others and words.

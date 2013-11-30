@@ -133,6 +133,11 @@ class LdaGibbsTest(unittest.TestCase):
     def test_topic_conditional_norm(self):
         test_cond = self.lda.topic_conditional(0, 7, stats)
         self.assertAlmostEqual(test_cond.sum(), 1.0)
-            
+    
+    def test_gibbs_sample(self):
+        # Run sampler to test for runtime errors
+        stats = self.lda._gibbs_init(corpus)
+        self.lda._gibbs_sample(stats)
+        
 if __name__ == '__main__':
     unittest.main()
