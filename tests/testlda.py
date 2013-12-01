@@ -42,6 +42,36 @@ stats = {
         [0,0,1,1,0,1,0,2,0,2,0,0,0,0]
     ])
     , 'nk': np.array([8, 9, 7])
+    , 'topics': dict()
+}
+# Fake data for testing stat merging/splitting
+query_stats = {
+    'nmk': np.array([[2, 1, 3], [2, 3, 1]])
+    , 'nm': np.array([6, 6])
+    , 'nkw': np.array([
+        [0,0,0,1,0,0,0,0,0,1,0,0,0,2],
+        [0,0,1,0,0,0,0,2,0,0,0,0,1,0],
+        [1,0,0,0,0,0,0,1,0,1,1,0,0,0]
+    ])
+    , 'nk': np.array([4, 4, 4])
+    , 'topics': {
+        (0,0):(13,0),(0,1):(10,2),(0,2):(3,0),(0,3):(7,1),(0,4):(9,2),(0,5):(0,2)
+        , (1,0):(12,1),(1,1):(7,2),(1,2):(9,0),(1,3):(13,0),(1,4):(7,1),(1,5):(2,1)
+    }
+}
+merged_stats = {
+    'nmk': np.array([[4,5,3],[1,2,1],[1,2,0],[2,0,3],[2,1,3],[2,3,1]])
+    , 'nm': np.array([12, 4, 3, 5, 6, 6])
+    , 'nkw': np.array([
+        [1,0,1,1,0,0,1,2,0,1,1,0,1,3],
+        [0,1,2,0,1,1,0,3,1,0,0,1,2,1],
+        [1,0,1,1,0,1,0,3,0,3,1,0,0,0]
+    ])
+    , 'nk': np.array([12, 13, 11])
+    , 'topics': {
+        (0,0):(13,0),(0,1):(10,2),(0,2):(3,0),(0,3):(7,1),(0,4):(9,2),(0,5):(0,2)
+        , (1,0):(12,1),(1,1):(7,2),(1,2):(9,0),(1,3):(13,0),(1,4):(7,1),(1,5):(2,1)
+    }
 }
 # Hyperparameters used in hand-calculations
 stub_alpha = np.array([0.1, 0.2, 0.3])
@@ -94,6 +124,28 @@ class UtilTest(unittest.TestCase):
             nptest.assert_array_equal(test_samples, samples)
         finally:
             __main__.nprand.random_sample = tmp
+        
+    def test_merge_query_stats(self):
+        test_stats = merge_query_stats(stats, query_stats)
+        nptest.assert_array_equal(test_stats['nmk'], merged_stats['nmk'])
+        nptest.assert_array_equal(test_stats['nm'], merged_stats['nm'])
+        nptest.assert_array_equal(test_stats['nkw'], merged_stats['nkw'])
+        nptest.assert_array_equal(test_stats['nk'], merged_stats['nk'])
+        nptest.assert_array_equal(test_stats['nk'], merged_stats['nk'])
+        test_topics = sorted(test_stats['topics'].items())
+        merged_topics = sorted(merged_stats['topics'].items())
+        nptest.assert_array_equal(test_topics, merged_topics)
+        
+    def test_split_query_stats(self):
+        test_stats = split_query_stats(stats, merged_stats)
+        nptest.assert_array_equal(test_stats['nmk'], query_stats['nmk'])
+        nptest.assert_array_equal(test_stats['nm'], query_stats['nm'])
+        nptest.assert_array_equal(test_stats['nkw'], query_stats['nkw'])
+        nptest.assert_array_equal(test_stats['nk'], query_stats['nk'])
+        nptest.assert_array_equal(test_stats['nk'], query_stats['nk'])
+        test_topics = sorted(test_stats['topics'].items())
+        query_topics = sorted(query_stats['topics'].items())
+        nptest.assert_array_equal(test_topics, query_topics)
 
 class LdaInitTest(unittest.TestCase):
     

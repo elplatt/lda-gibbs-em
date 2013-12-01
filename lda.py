@@ -64,6 +64,30 @@ def polya_iteration(ndm, nd, guess, iter=5):
         param = new
     return param
 
+def merge_query_stats(train, test):
+    '''Merge training and test statistics.'''
+    # We do not include training topics in the list so they aren't resampled
+    stats = {
+        'nmk': np.concatenate((train['nmk'], test['nmk']))
+        , 'nm': np.concatenate((train['nm'], test['nm']))
+        , 'nkw': train['nkw'] + test['nkw']
+        , 'nk': train['nk'] + test['nk']
+        , 'topics': dict(test['topics'])
+    }
+    return stats
+    
+def split_query_stats(train, combined):
+    '''Get test stats from combined training-test stats after a query.'''
+    num_train = train['nmk'].shape[0]
+    stats = {
+        'nmk': combined['nmk'][num_train:,:]
+        , 'nm': combined['nm'][num_train:]
+        , 'nkw': combined['nkw'] - train['nkw']
+        , 'nk': combined['nk'] - train['nk']
+        , 'topics': dict(combined['topics'])
+    }
+    return stats
+
 class LdaModel(object):
     
     def __init__(self, training, num_topics, alpha=0.1, eta=0.1, burn=50, lag=4):
@@ -96,6 +120,7 @@ class LdaModel(object):
         self.burn = burn
         self.lag = lag
         self.stats = self._gibbs_init(training)
+        self._gibbs_sample_n(self.stats, burn)
     
     def e_step(self):
         '''Associate each word with a topic using Gibbs sampling.'''
@@ -112,10 +137,26 @@ class LdaModel(object):
         result = np.divide(result, result.sum(1)[:,np.newaxis])
         return result
     
+    def query(self, corpus):
+        '''Find topic distributions for new documents based on trained model.
+        
+        :param corpus: new documents as (num_docs, vocab_size) array
+        :return: topic statistics for new documents
+        '''
+        # Initialize the gibbs sampler for the test corpus
+        test_stats = self._gibbs_init(corpus)
+        # Merge training and test stats then burn in
+        all_stats = merge_query_stats(self.stats, test_stats)
+        self._gibbs_sample_n(self.burn, all_stats)
+        # Split test corpus stats back out
+        test_stats = split_query_stats(self.stats, all_stats)
+        return test_stats
+
     def _gibbs_init(self, corpus):
         '''Initialize Gibbs sampling by assigning a random topic to each word in
             the corpus.
         :param corpus: corpus[m][w] is the count for word w in document m
+        :param skip: skip initialization for first skip docs, default 0
         :returns: statistics dict with the following keys:
             nmk: document-topic count, nmk[m][k] is for document m, topic k
             nm: document-topic sum, nm[m] is the number of words in document m
@@ -131,7 +172,6 @@ class LdaModel(object):
             , 'nm': np.zeros(num_docs)
             , 'nkw': np.zeros((self.num_topics, num_words))
             , 'nk': np.zeros(self.num_topics)
-            , 'n': 0
             , 'topics': {}
         }
         for m in xrange(num_docs):
@@ -142,11 +182,7 @@ class LdaModel(object):
                 stats['nm'][m] += 1
                 stats['nkw'][k][w] += 1
                 stats['nk'][k] += 1
-                stats['n'] += 1
                 stats['topics'][(m, i)] = (w, k)
-        # Burn in
-        for i in range(self.burn):
-            self._gibbs_sample_one(stats)
         return stats
     
     def _gibbs_sample(self, stats):
@@ -154,7 +190,11 @@ class LdaModel(object):
         
         :param stats: statistics returned by _gibbs_init(), will be modified.
         '''
-        for i in range(self.lag + 1):
+        self._gibbs_sample_n(stats, self.lag + 1)
+    
+    def _gibbs_sample_n(self, stats, n):
+        '''Call _gibbs_sample_one() n times.'''
+        for i in range(n):
             self._gibbs_sample_one(stats)
     
     def _gibbs_sample_one(self, stats):
