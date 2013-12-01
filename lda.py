@@ -146,7 +146,7 @@ class LdaModel(object):
                 stats['topics'][(m, i)] = (w, k)
         # Burn in
         for i in range(self.burn):
-            self._gibbs_sample(stats)
+            self._gibbs_sample_one(stats)
         return stats
     
     def _gibbs_sample(self, stats):
