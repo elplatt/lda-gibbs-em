@@ -131,9 +131,23 @@ class LdaModel(object):
         self._m_alpha()
         self._m_eta()
     
-    def beta(self):
-        '''Per-topic word distributions as a (num_topics, vocab_size) array.'''
-        result = self.stats['nkw'] + self.eta
+    def beta(self, stats=None):
+        '''Per-topic word distributions as a (num_topics, vocab_size) array.
+        :param stats: Optionally specify stats, otherwise use model stats
+        '''
+        if stats is None:
+            stats = self.stats
+        result = stats['nkw'] + self.eta
+        result = np.divide(result, result.sum(1)[:,np.newaxis])
+        return result
+    
+    def theta(self, stats=None):
+        '''Per-document topic distributions as a (num_docs, vocab_size) array.
+        :param stats: Optionally specify stats, otherwise use model stats
+        '''
+        if stats is None:
+            stats = self.stats
+        result = stats['nmk'] + self.alpha
         result = np.divide(result, result.sum(1)[:,np.newaxis])
         return result
     

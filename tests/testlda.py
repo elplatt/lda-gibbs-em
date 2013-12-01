@@ -91,6 +91,14 @@ beta = np.array([
               2.08, 0.09, 2.10, 0.11, 0.12, 0.13, 0.14]) / 8.05
 ])
 
+# Hand-calculated per-document topic distribution
+theta = np.array([
+    np.array([4.1, 5.2, 3.3]) / 12.6
+    , np.array([1.1, 2.2, 1.3]) / 4.6
+    , np.array([1.1, 2.2, 0.3]) / 3.6
+    , np.array([2.1, 0.2, 3.3]) / 5.6
+])
+
 # Stub for numpy.randint over [0,3)
 def stub_randint(min, max):
     stub_randint.count += 1
@@ -187,6 +195,10 @@ class LdaBetaThetaTest(unittest.TestCase):
     def test_beta(self):
         test_beta = self.lda.beta()
         nptest.assert_allclose(test_beta, beta)
+        
+    def test_theta(self):
+        test_theta = self.lda.theta()
+        nptest.assert_allclose(test_theta, theta)
 
 class LdaGibbsTest(unittest.TestCase):
     
