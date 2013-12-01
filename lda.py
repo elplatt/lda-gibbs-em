@@ -1,5 +1,9 @@
 '''
 Latent Dirichlet Allocation
+
+References:
+Heinrich, Gregor. Parameter estimation for text analysis. Technical report. 2005 (revised 2009)
+Minka, Thomas P. Estimating a Dirichlet distribution. 2000. (revised 2012)
 '''
 
 import math
@@ -27,6 +31,38 @@ def sample(dist):
     cdf = np.cumsum(dist)
     uniform = nprand.random_sample()
     return next(n for n in range(0, len(cdf)) if cdf[n] > uniform)
+
+def polya_iteration(ndm, nd, guess, iter=5):
+    '''Estimate the parameter of a dirichlet-multinomial distribution
+    with num_dir draws from the dirichlet and num_out possible outcomes.
+    
+    :param ndm: Counts as (num_dir, num_out) array
+    :param nd: Counts as (num_dir) array
+    :param guess: Initial guess for dirichlet parameter
+    :param iter: Number of iterations to perform, default 5
+    :returns: An updated estimate of the dirichlet parameter
+    '''
+    num_dir, num_out = ndm.shape
+    param = guess
+    for i in range(iter):
+        # Heinrich2005 Eq. 83
+        # Minka2000 Eq. 55
+        new = np.zeros(num_out)
+        param_sum = param.sum()
+        den = 0
+        for d in range(num_dir):
+            den += spspecial.psi(nd[d] + param_sum)
+        den -= num_dir * spspecial.psi(param_sum)
+        for m in range(num_out):
+            for d in range(num_dir):
+                new[m] += spspecial.psi(ndm[d,m] + param[m])
+            new[m] -= num_dir * spspecial.psi(param[m])
+            new[m] /= den
+            new[m] *= param[m]
+            if new[m] <= 0:
+                new[m] = 1e-5
+        param = new
+    return param
 
 class LdaModel(object):
     
@@ -58,11 +94,14 @@ class LdaModel(object):
         self.stats = self._gibbs_init(training)
     
     def e_step(self, gibbs_iter=50):
+        '''Associate each word with a topic using Gibbs sampling.'''
         for i in range(gibbs_iter):
             self._gibbs_sample(self.stats)
             
     def m_step(self):
+        '''Update estimates for alpha and eta to maximize likelihood.'''
         self._m_alpha()
+        self._m_eta()
     
     def beta(self):
         '''Per-topic word distributions as a (num_topics, vocab_size) array.'''
@@ -129,31 +168,23 @@ class LdaModel(object):
             stats['nk'][k] += 1
             stats['topics'][(m, i)] = (w, k)
     
-    def _m_alpha(self, iterations=5):
+    def _m_alpha(self, iter=5):
         '''Find a new estimate for alpha that maximizes likelihood.
         
-        :param iterations: The number of iterations to perform, defaults to 5
+        :param iter: The number of iterations to perform, defaults to 5
         '''
-        alpha = self.alpha
-        stats = self.stats
-        num_topics = alpha.shape[0]
-        num_docs = stats['nmk'].shape[0]
-        for i in range(iterations):
-            # Heinrich2009 Eq. 83
-            new = np.zeros(num_topics)
-            alphasum = alpha.sum()
-            den = 0
-            for m in range(num_docs):
-                den += spspecial.psi(stats['nm'][m] + alphasum)
-            den -= num_docs*spspecial.psi(alphasum)
-            for k in range(num_topics):
-                for m in range(num_docs):
-                    new[k] += spspecial.psi(stats['nmk'][m,k] + alpha[k])
-                new[k] -= num_docs * spspecial.psi(alpha[k])
-                new[k] /= den
-                new[k] *= alpha[k]
-            alpha = new
-        self.alpha = alpha
+        ndm = self.stats['nmk']
+        nd = self.stats['nm']
+        self.alpha = polya_iteration(ndm, nd, self.alpha, iter)
+        
+    def _m_eta(self, iter=5):
+        '''Find a new estimate for alpha that maximizes likelihood.
+        
+        :param iter: The number of iterations to perform, defaults to 5
+        '''
+        ndm = self.stats['nkw']
+        nd = self.stats['nk']
+        self.eta = polya_iteration(ndm, nd, self.eta, iter)
     
     def topic_conditional(self, m, w, stats):
         '''Distribution of a single topic given others and words.
