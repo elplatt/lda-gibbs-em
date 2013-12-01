@@ -67,9 +67,10 @@ def polya_iteration(ndm, nd, guess, iter=5):
 def merge_query_stats(train, test):
     '''Merge training and test statistics.'''
     # We do not include training topics in the list so they aren't resampled
+    # We don't change indices on the topics dict so test data must be first!
     stats = {
-        'nmk': np.concatenate((train['nmk'], test['nmk']))
-        , 'nm': np.concatenate((train['nm'], test['nm']))
+        'nmk': np.concatenate((test['nmk'], train['nmk']))
+        , 'nm': np.concatenate((test['nm'], train['nm']))
         , 'nkw': train['nkw'] + test['nkw']
         , 'nk': train['nk'] + test['nk']
         , 'topics': dict(test['topics'])
@@ -78,10 +79,10 @@ def merge_query_stats(train, test):
     
 def split_query_stats(train, combined):
     '''Get test stats from combined training-test stats after a query.'''
-    num_train = train['nmk'].shape[0]
+    num_test = combined['nmk'].shape[0] - train['nmk'].shape[0]
     stats = {
-        'nmk': combined['nmk'][num_train:,:]
-        , 'nm': combined['nm'][num_train:]
+        'nmk': combined['nmk'][:num_test,:]
+        , 'nm': combined['nm'][:num_test]
         , 'nkw': combined['nkw'] - train['nkw']
         , 'nk': combined['nk'] - train['nk']
         , 'topics': dict(combined['topics'])
@@ -159,9 +160,9 @@ class LdaModel(object):
         '''
         # Initialize the gibbs sampler for the test corpus
         test_stats = self._gibbs_init(corpus)
-        # Merge training and test stats then burn in
+        # Merge training and test stats then burn in and sample
         all_stats = merge_query_stats(self.stats, test_stats)
-        self._gibbs_sample_n(self.burn, all_stats)
+        self._gibbs_sample_n(all_stats, self.burn + 1)
         # Split test corpus stats back out
         test_stats = split_query_stats(self.stats, all_stats)
         return test_stats

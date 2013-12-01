@@ -10,7 +10,7 @@ import numpy.testing as nptest
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 import __main__
-from lda import *
+import lda
 
 # Sample corpus for validating calculations
 text = [
@@ -45,6 +45,10 @@ stats = {
     , 'topics': dict()
 }
 # Fake data for testing stat merging/splitting
+query_corpus = np.array([
+    [1,0,0,1,0,0,0,1,0,1,1,0,0,1],
+    [0,0,1,0,0,0,0,2,0,1,0,0,1,1]
+])
 query_stats = {
     'nmk': np.array([[2, 1, 3], [2, 3, 1]])
     , 'nm': np.array([6, 6])
@@ -60,8 +64,8 @@ query_stats = {
     }
 }
 merged_stats = {
-    'nmk': np.array([[4,5,3],[1,2,1],[1,2,0],[2,0,3],[2,1,3],[2,3,1]])
-    , 'nm': np.array([12, 4, 3, 5, 6, 6])
+    'nmk': np.array([[2,1,3],[2,3,1],[4,5,3],[1,2,1],[1,2,0],[2,0,3]])
+    , 'nm': np.array([6, 6, 12, 4, 3, 5])
     , 'nkw': np.array([
         [1,0,1,1,0,0,1,2,0,1,1,0,1,3],
         [0,1,2,0,1,1,0,3,1,0,0,1,2,1],
@@ -99,6 +103,13 @@ theta = np.array([
     , np.array([2.1, 0.2, 3.3]) / 5.6
 ])
 
+# Stub for sampling query topics
+def stub_sample_query(dist):
+    stub_sample_query.count += 1
+    val = [2, 0, 1, 2, 2, 0, 1, 2, 1, 0, 1, 0]
+    return val[stub_sample_query.count]
+stub_sample_query.count = -1
+
 # Stub for numpy.randint over [0,3)
 def stub_randint(min, max):
     stub_randint.count += 1
@@ -113,28 +124,32 @@ def stub_random_sample():
     return val[stub_random_sample.count]
 stub_random_sample.count = -1
 
+# Stub for (in place) numpy.random.shuffle
+def stub_shuffle(l):
+    l.sort()
+
 class UtilTest(unittest.TestCase):
     
     def test_word_iter(self):
         '''Test iterating the words in the first document of the corpus.'''
         for m, correct_words in enumerate(corpus_words):
-            words = list(word_iter(corpus[m,:]))
+            words = list(lda.word_iter(corpus[m,:]))
             self.assertEqual(words, correct_words)
             
     def test_sample(self):
         '''Test sampling from a discrete distribution'''
-        tmp = __main__.nprand.random_sample
-        __main__.nprand.random_sample = stub_random_sample
+        tmp = lda.nprand.random_sample
+        lda.nprand.random_sample = stub_random_sample
         try:
             dist = np.array([0.5, 0.25, 0.125, 0.125])
             samples = [0, 0, 1, 1, 3]
-            test_samples = [sample(dist) for i in range(5)]
+            test_samples = [lda.sample(dist) for i in range(5)]
             nptest.assert_array_equal(test_samples, samples)
         finally:
-            __main__.nprand.random_sample = tmp
+            lda.nprand.random_sample = tmp
         
     def test_merge_query_stats(self):
-        test_stats = merge_query_stats(stats, query_stats)
+        test_stats = lda.merge_query_stats(stats, query_stats)
         nptest.assert_array_equal(test_stats['nmk'], merged_stats['nmk'])
         nptest.assert_array_equal(test_stats['nm'], merged_stats['nm'])
         nptest.assert_array_equal(test_stats['nkw'], merged_stats['nkw'])
@@ -145,7 +160,7 @@ class UtilTest(unittest.TestCase):
         nptest.assert_array_equal(test_topics, merged_topics)
         
     def test_split_query_stats(self):
-        test_stats = split_query_stats(stats, merged_stats)
+        test_stats = lda.split_query_stats(stats, merged_stats)
         nptest.assert_array_equal(test_stats['nmk'], query_stats['nmk'])
         nptest.assert_array_equal(test_stats['nm'], query_stats['nm'])
         nptest.assert_array_equal(test_stats['nkw'], query_stats['nkw'])
@@ -164,23 +179,23 @@ class LdaInitTest(unittest.TestCase):
     def test_init_scalar(self):
         alpha = 0.2
         eta = 0.3
-        lda = LdaModel(corpus, self.num_topics, alpha, eta)
-        nptest.assert_array_equal(lda.alpha, np.ones(self.num_topics)*alpha)
-        nptest.assert_array_equal(lda.eta, np.ones(self.vocab_size)*eta)
+        model = lda.LdaModel(corpus, self.num_topics, alpha, eta)
+        nptest.assert_array_equal(model.alpha, np.ones(self.num_topics)*alpha)
+        nptest.assert_array_equal(model.eta, np.ones(self.vocab_size)*eta)
     
     def test_init_vector(self):
         alpha = np.ones(self.num_topics) * 0.2
         eta = np.ones(self.vocab_size) * 0.3
-        lda = LdaModel(corpus, self.num_topics, alpha, eta)
-        nptest.assert_array_equal(lda.alpha, alpha)
-        nptest.assert_array_equal(lda.eta, eta)
+        model = lda.LdaModel(corpus, self.num_topics, alpha, eta)
+        nptest.assert_array_equal(model.alpha, alpha)
+        nptest.assert_array_equal(model.eta, eta)
     
     def test_init_default(self):
-        lda = LdaModel(corpus, self.num_topics)
+        model = lda.LdaModel(corpus, self.num_topics)
         alpha = np.ones(self.num_topics) * 0.1
         eta = np.ones(self.vocab_size) * 0.1
-        nptest.assert_array_equal(lda.alpha, alpha)
-        nptest.assert_array_equal(lda.eta, eta)
+        nptest.assert_array_equal(model.alpha, alpha)
+        nptest.assert_array_equal(model.eta, eta)
 
 class LdaBetaThetaTest(unittest.TestCase):
     
@@ -189,15 +204,15 @@ class LdaBetaThetaTest(unittest.TestCase):
         vocab_size = 14
         alpha = np.array([0.1, 0.2, 0.3])
         eta = np.array(range(1, vocab_size+1)) / 100.0
-        self.lda = LdaModel(corpus, num_topics, alpha, eta)
-        self.lda.stats = stats
+        self.model = lda.LdaModel(corpus, num_topics, alpha, eta)
+        self.model.stats = stats
     
     def test_beta(self):
-        test_beta = self.lda.beta()
+        test_beta = self.model.beta()
         nptest.assert_allclose(test_beta, beta)
         
     def test_theta(self):
-        test_theta = self.lda.theta()
+        test_theta = self.model.theta()
         nptest.assert_allclose(test_theta, theta)
 
 class LdaGibbsTest(unittest.TestCase):
@@ -207,46 +222,61 @@ class LdaGibbsTest(unittest.TestCase):
         vocab_size = 14
         alpha = np.array([0.1, 0.2, 0.3])
         eta = np.array(range(1, vocab_size+1)) / 100.0
-        self.lda = LdaModel(corpus, num_topics, alpha, eta, 0, 0)
+        self.model = lda.LdaModel(corpus, num_topics, alpha, eta, 0, 0)
 
     def test_gibbs_init(self):
         # Use random stub
-        tmp = __main__.nprand.randint
-        __main__.nprand.randint = stub_randint
+        tmp = lda.nprand.randint
+        lda.nprand.randint = stub_randint
         try:
-            test_stats = self.lda._gibbs_init(corpus)
+            test_stats = self.model._gibbs_init(corpus)
             nptest.assert_array_equal(test_stats['nmk'], stats['nmk'])
             nptest.assert_array_equal(test_stats['nm'], stats['nm'])
             nptest.assert_array_equal(test_stats['nkw'], stats['nkw'])
             nptest.assert_array_equal(test_stats['nk'], stats['nk'])
         finally:
-            __main__.nprand.randint = tmp
+            lda.nprand.randint = tmp
             
     def test_topic_conditional(self):
-        test_cond = self.lda.topic_conditional(0, 7, stats)
+        test_cond = self.model.topic_conditional(0, 7, stats)
         nptest.assert_allclose(test_cond, topic_cond)
     
     def test_topic_conditional_norm(self):
-        test_cond = self.lda.topic_conditional(0, 7, stats)
+        test_cond = self.model.topic_conditional(0, 7, stats)
         self.assertAlmostEqual(test_cond.sum(), 1.0)
     
     def test_gibbs_sample(self):
         # Run sampler to test for runtime errors
-        stats = self.lda._gibbs_init(corpus)
-        self.lda._gibbs_sample(stats)
+        stats = self.model._gibbs_init(corpus)
+        self.model._gibbs_sample(stats)
+    
+    def test_query(self):
+        old_shuffle = lda.nprand.shuffle
+        lda.nprand.shuffle = stub_shuffle
+        old_sample = lda.sample
+        lda.sample = stub_sample_query
+        try:
+            test_stats = self.model.query(query_corpus)
+            nptest.assert_array_equal(test_stats['nmk'], query_stats['nmk'])
+            nptest.assert_array_equal(test_stats['nm'], query_stats['nm'])
+            nptest.assert_array_equal(test_stats['nkw'], query_stats['nkw'])
+            nptest.assert_array_equal(test_stats['nk'], query_stats['nk'])
+        finally:
+            lda.nprand.shuffle = old_shuffle
+            lda.sample = old_sample
 
 class LdaEmTest(unittest.TestCase):
     
     def setUp(self):
         num_topics = 3
         vocab_size = 14
-        self.lda = LdaModel(corpus, num_topics, stub_alpha, stub_eta)
-        self.lda.stats = stats
+        self.model = lda.LdaModel(corpus, num_topics, stub_alpha, stub_eta)
+        self.model.stats = stats
     
     def test_m_alpha(self):
         new_alpha = np.array([0.1*42.63, 0.2*18.5, 0.3*12.42]) / 12.83
-        self.lda._m_alpha(1)
-        nptest.assert_allclose(self.lda.alpha, new_alpha, rtol=1e-2)
+        self.model._m_alpha(1)
+        nptest.assert_allclose(self.model.alpha, new_alpha, rtol=1e-2)
 
 if __name__ == '__main__':
     unittest.main()
