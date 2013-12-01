@@ -66,7 +66,7 @@ def polya_iteration(ndm, nd, guess, iter=5):
 
 class LdaModel(object):
     
-    def __init__(self, training, num_topics, alpha=0.1, eta=0.1):
+    def __init__(self, training, num_topics, alpha=0.1, eta=0.1, burn=50, lag=4):
         '''Creates an LDA model.
         
         :param training: training corpus as (num_doc, vocab_size) array
@@ -75,6 +75,8 @@ class LdaModel(object):
             defaults to 0.1
         :param eta: topic-word dirichlet parameter, scalar or array,
             defaults to 0.1
+        :param burn: number of "burn-in" gibbs iterations, default 50
+        :param lag: number of gibbs iterations between samples, default 4
         '''
         self.num_topics = num_topics
         # Validate alpha and eta, and convert to array if necessary
@@ -91,13 +93,14 @@ class LdaModel(object):
         except TypeError:
             self.eta = np.ones(training.shape[1])*eta
         # Initialize gibbs sampler
+        self.burn = burn
+        self.lag = lag
         self.stats = self._gibbs_init(training)
     
-    def e_step(self, gibbs_iter=50):
+    def e_step(self):
         '''Associate each word with a topic using Gibbs sampling.'''
-        for i in range(gibbs_iter):
-            self._gibbs_sample(self.stats)
-            
+        self._gibbs_sample(self.stats)
+        
     def m_step(self):
         '''Update estimates for alpha and eta to maximize likelihood.'''
         self._m_alpha()
@@ -141,10 +144,21 @@ class LdaModel(object):
                 stats['nk'][k] += 1
                 stats['n'] += 1
                 stats['topics'][(m, i)] = (w, k)
+        # Burn in
+        for i in range(self.burn):
+            self._gibbs_sample(stats)
         return stats
     
     def _gibbs_sample(self, stats):
-        '''Resample topics for each word using Gibbs sampling.
+        '''Resample topics for each word using Gibbs sampling, with lag.
+        
+        :param stats: statistics returned by _gibbs_init(), will be modified.
+        '''
+        for i in range(self.lag + 1):
+            self._gibbs_sample_one(stats)
+    
+    def _gibbs_sample_one(self, stats):
+        '''Resample topics for each word using Gibbs sampling, without lag.
         
         :param stats: statistics returned by _gibbs_init(), will be modified.
         '''

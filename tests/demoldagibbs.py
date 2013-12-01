@@ -31,7 +31,7 @@ def main():
     print 'Generating corpus'
     corpus = generate_corpus()
     print 'Initializing Model'
-    model = lda.LdaModel(corpus, num_topics, alpha)
+    model = lda.LdaModel(corpus, num_topics, alpha, 0, 0)
     print 'Sampling'
     for i in range(ITERATIONS):
         model._gibbs_sample(model.stats)

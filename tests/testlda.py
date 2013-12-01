@@ -143,7 +143,7 @@ class LdaGibbsTest(unittest.TestCase):
         vocab_size = 14
         alpha = np.array([0.1, 0.2, 0.3])
         eta = np.array(range(1, vocab_size+1)) / 100.0
-        self.lda = LdaModel(corpus, num_topics, alpha, eta)
+        self.lda = LdaModel(corpus, num_topics, alpha, eta, 0, 0)
 
     def test_gibbs_init(self):
         # Use random stub

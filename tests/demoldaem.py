@@ -21,7 +21,8 @@ NUM_TOPICS = 4
 NUM_DOCS = 100
 DOC_LENGTH = 10
 NUM_ITER = 50
-NUM_GIBBS = 1
+GIBBS_BURN = 50
+GIBBS_LAG = 5
 
 alpha = np.array([0.02, 0.02, 0.02, 0.02])
 eta = 0.5*np.ones(VOCAB_SIZE)
@@ -38,12 +39,12 @@ def main():
     alpha_guess = 0.5
     eta_guess = 0.5
     print 'Initializing model'
-    model = lda.LdaModel(corpus, NUM_TOPICS, alpha_guess, eta_guess)
+    model = lda.LdaModel(corpus, NUM_TOPICS, alpha_guess, eta_guess, GIBBS_BURN, GIBBS_LAG)
     add_to_img(topic_img, 0, beta, model.beta())
     # Do E-M iterations
     for i in range(NUM_ITER):
         print 'E-step %d' % i
-        model.e_step(NUM_GIBBS)
+        model.e_step()
         print 'M-step %d' % i
         model.m_step()
         add_to_img(topic_img, i+1, beta, model.beta())
