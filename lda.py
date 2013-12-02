@@ -171,18 +171,17 @@ class LdaModel(object):
         '''Estimated (with Gibbs sampling) perplexity of a test corpus.'''
         # Heinrich2005 Eq. 94
         stats = self.query(corpus)
-        lik = elf.log_liklihood(stats)
+        lik = self.log_likelihood(corpus, stats)
         return np.exp(-1 * lik.sum() / stats['nm'].sum())
 
-    def log_likelihood(self, stats):
-        '''Log-likeliehood of generating a test corpus with the given stats.'''
+    def log_likelihood(self, corpus, stats):
+        '''Log-likeliehood of generating a test corpus with the given corpus.'''
         # Heinrich2005 Eq. 96
         # Get per-topic word distribution for model
         beta = np.matrix(self.beta())
         # Get per-document topic distribution for test corpus
         theta = np.matrix(self.theta(stats))
-        nmw = np.matrix(stats['nmw'])
-        lik = np.multiply(np.log(np.array(theta*beta)), nmw).sum(1)
+        lik = np.multiply(np.log(np.array(theta*beta)), corpus).sum(1)
         return lik
 
     def _gibbs_init(self, corpus):

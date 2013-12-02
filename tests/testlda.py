@@ -103,6 +103,10 @@ theta = np.array([
     , np.array([2.1, 0.2, 3.3]) / 5.6
 ])
 
+# Hand-calculated query likelihood and perplexity
+query_log_lik = np.array([-15.2329, -13.1347])
+query_perp = 10.633
+
 # Stub for sampling query topics
 def stub_sample_query(dist):
     stub_sample_query.count += 1
@@ -127,6 +131,10 @@ stub_random_sample.count = -1
 # Stub for (in place) numpy.random.shuffle
 def stub_shuffle(l):
     l.sort()
+    
+# Stub for query
+def stub_query(corpus):
+    return query_stats
 
 class UtilTest(unittest.TestCase):
     
@@ -249,6 +257,29 @@ class LdaGibbsTest(unittest.TestCase):
         # Run sampler to test for runtime errors
         stats = self.model._gibbs_init(corpus)
         self.model._gibbs_sample(stats)
+
+class LdaQueryTest(unittest.TestCase):
+    
+    def setUp(self):
+        num_topics = 3
+        vocab_size = 14
+        alpha = np.array([0.1, 0.2, 0.3])
+        eta = np.array(range(1, vocab_size+1)) / 100.0
+        self.model = lda.LdaModel(corpus, num_topics, alpha, eta, 0, 0)
+        self.model.stats = stats
+    
+    def test_log_lik(self):
+        lik = self.model.log_likelihood(query_corpus, query_stats)
+        nptest.assert_allclose(lik, query_log_lik, rtol=1e-2)
+    
+    def test_perplexity(self):
+        old_query = self.model.query
+        self.model.query = stub_query
+        try:
+            perplexity = self.model.perplexity(query_corpus)
+            self.assertAlmostEqual(perplexity, query_perp, places=3)
+        finally:
+            self.model.query = old_query
     
     def test_query(self):
         old_shuffle = lda.nprand.shuffle
