@@ -21,7 +21,7 @@ NUM_TOPICS = 10
 NUM_DOCS = 100
 DOC_LENGTH = 100
 NUM_ITER = 25
-GIBBS_BURN = 0
+GIBBS_BURN = 5
 GIBBS_LAG = 5
 
 alpha = 0.2*np.ones(NUM_TOPICS)
@@ -47,18 +47,16 @@ def main():
         print 'Iteration %d' % i
         model.e_step()
         lik = model.expected_log_likelihood()
-        print 'ML: %f (%f)' % (lik, lik - last_lik)
+        print ' E-step ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
-        #model.m_step()
         model._m_alpha()
-        print "sum alpha = %f " % model.alpha.sum()
         lik = model.expected_log_likelihood()
-        print 'ML: %f (%f)' % (lik, lik - last_lik)
+        print ' M-step(alpha) ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
         model._m_eta()
         add_to_img(topic_img, i+1, beta, model.beta())
         lik = model.expected_log_likelihood()
-        print 'ML: %f (%f)' % (lik, lik - last_lik)
+        print ' M-step(eta) ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
     save_topics(topic_img)
 
