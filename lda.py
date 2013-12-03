@@ -272,6 +272,24 @@ class LdaModel(object):
         nd = self.stats['nk']
         self.eta = polya_iteration(ndm, nd, self.eta, iter)
     
+    def expected_log_liklihood(self):
+        '''Expected (p(theta,beta|gibbs_z)) log likelihood of model.'''
+        stats = self.stats
+        lik = 0
+        num_docs = stats['nmk'].shape[0]
+        num_topics = stats['nkw'].shape[0]
+        vocab_size = stats['nkw'].shape[1]
+        psi = spspecial.psi
+        # Virtual word and topic counts
+        # TODO
+        for m in range(num_docs):
+            for k in range(num_topics):
+                pass # TODO
+        for k in range(num_topics):
+            for w in range(vocab_size):
+                pass # TODO
+        return lik
+    
     def topic_conditional(self, m, w, stats):
         '''Distribution of a single topic given others and words.
         
