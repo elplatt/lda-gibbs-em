@@ -61,8 +61,17 @@ def polya_iteration(ndm, nd, guess, iter=5):
             new[m] *= param[m]
             if new[m] <= 0:
                 new[m] = 1e-5
+        # rel_change = np.abs((new-param)).sum()/new.sum()
         param = new
     return param
+
+def log_multinomial_beta(a, axis=0):
+    '''Log of multinomial beta function along a given axis (default 0).'''
+    return spspecial.gammaln(a).sum(axis) - spspecial.gammaln(a.sum(axis))
+
+def multinomial_beta(a, axis=0):
+    '''Multinomial beta function along a given axis (default 0).'''
+    return np.exp(log_multinomial_beta(a, axis))
 
 def merge_query_stats(train, test):
     '''Merge training and test statistics.'''
@@ -122,6 +131,12 @@ class LdaModel(object):
         self.lag = lag
         self.stats = self._gibbs_init(training)
         self._gibbs_sample_n(self.stats, burn)
+    
+    def em_iterate(self, n=1):
+        '''Do n (default 1) EM iterations.'''
+        for i in range(n):
+            self.e_step()
+            self.m_step()
     
     def e_step(self):
         '''Associate each word with a topic using Gibbs sampling.'''
@@ -272,22 +287,27 @@ class LdaModel(object):
         nd = self.stats['nk']
         self.eta = polya_iteration(ndm, nd, self.eta, iter)
     
-    def expected_log_liklihood(self):
+    def expected_log_likelihood(self):
         '''Expected (p(theta,beta|gibbs_z)) log likelihood of model.'''
         stats = self.stats
-        lik = 0
-        num_docs = stats['nmk'].shape[0]
-        num_topics = stats['nkw'].shape[0]
-        vocab_size = stats['nkw'].shape[1]
         psi = spspecial.psi
+        num_topics = stats['nkw'].shape[0]
+        num_docs = stats['nmk'].shape[0]
         # Virtual word and topic counts
-        # TODO
-        for m in range(num_docs):
-            for k in range(num_topics):
-                pass # TODO
-        for k in range(num_topics):
-            for w in range(vocab_size):
-                pass # TODO
+        vmk = self.alpha + stats['nmk']
+        vkw = self.eta + stats['nkw']
+        # Multinomial beta of virtual counts
+        mbeta_vmk = multinomial_beta(vmk, 1)[:,np.newaxis]
+        mbeta_vkw = multinomial_beta(vkw, 1)[:,np.newaxis]
+        # Expected value of multinomial components
+        nlogtheta = psi(vmk) - psi(vmk.sum(1))[:,np.newaxis]
+        nlogbeta = psi(vkw) - psi(vkw.sum(1))[:,np.newaxis]
+        # Calculate likelihood
+        lik = 0
+        lik += (mbeta_vmk * nlogtheta * (vmk - 1)).sum()
+        lik += (mbeta_vkw * nlogbeta * (vkw - 1)).sum()
+        lik -= num_docs * np.log(multinomial_beta(self.alpha))
+        lik -= num_topics * np.log(multinomial_beta(self.eta))
         return lik
     
     def topic_conditional(self, m, w, stats):

@@ -177,6 +177,11 @@ class UtilTest(unittest.TestCase):
         test_topics = sorted(test_stats['topics'].items())
         query_topics = sorted(query_stats['topics'].items())
         nptest.assert_array_equal(test_topics, query_topics)
+    
+    def test_multinomial_beta(self):
+        test = lda.log_multinomial_beta(stub_alpha + stats['nmk'], 1)
+        lmb = np.array([-12.5938, -2.6550, -0.1701, -1.5633])
+        nptest.assert_allclose(test, lmb, rtol=1e-3)
 
 class LdaInitTest(unittest.TestCase):
     

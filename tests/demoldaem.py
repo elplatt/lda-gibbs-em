@@ -42,12 +42,15 @@ def main():
     model = lda.LdaModel(corpus, NUM_TOPICS, alpha_guess, eta_guess, GIBBS_BURN, GIBBS_LAG)
     add_to_img(topic_img, 0, beta, model.beta())
     # Do E-M iterations
+    last_lik = model.expected_log_likelihood()
     for i in range(NUM_ITER):
-        print 'E-step %d' % i
+        print 'Iteration %d' % i
         model.e_step()
-        print 'M-step %d' % i
-        model.m_step()
+        #model.m_step()
         add_to_img(topic_img, i+1, beta, model.beta())
+        lik = model.expected_log_likelihood()
+        print 'ML: %f (%f)' % (lik, lik - last_lik)
+        last_lik = lik
     save_topics(topic_img)
 
 def generate_corpus():
