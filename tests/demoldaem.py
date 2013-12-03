@@ -17,14 +17,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 import lda
 
 VOCAB_SIZE = 25
-NUM_TOPICS = 4
+NUM_TOPICS = 10
 NUM_DOCS = 100
-DOC_LENGTH = 10
-NUM_ITER = 50
-GIBBS_BURN = 50
+DOC_LENGTH = 100
+NUM_ITER = 25
+GIBBS_BURN = 0
 GIBBS_LAG = 5
 
-alpha = np.array([0.02, 0.02, 0.02, 0.02])
+alpha = 0.2*np.ones(NUM_TOPICS)
 eta = 0.5*np.ones(VOCAB_SIZE)
 
 id = time.time()
@@ -46,7 +46,16 @@ def main():
     for i in range(NUM_ITER):
         print 'Iteration %d' % i
         model.e_step()
+        lik = model.expected_log_likelihood()
+        print 'ML: %f (%f)' % (lik, lik - last_lik)
+        last_lik = lik
         #model.m_step()
+        model._m_alpha()
+        print "sum alpha = %f " % model.alpha.sum()
+        lik = model.expected_log_likelihood()
+        print 'ML: %f (%f)' % (lik, lik - last_lik)
+        last_lik = lik
+        model._m_eta()
         add_to_img(topic_img, i+1, beta, model.beta())
         lik = model.expected_log_likelihood()
         print 'ML: %f (%f)' % (lik, lik - last_lik)

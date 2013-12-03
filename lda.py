@@ -296,18 +296,15 @@ class LdaModel(object):
         # Virtual word and topic counts
         vmk = self.alpha + stats['nmk']
         vkw = self.eta + stats['nkw']
-        # Multinomial beta of virtual counts
-        mbeta_vmk = multinomial_beta(vmk, 1)[:,np.newaxis]
-        mbeta_vkw = multinomial_beta(vkw, 1)[:,np.newaxis]
         # Expected value of multinomial components
-        nlogtheta = psi(vmk) - psi(vmk.sum(1))[:,np.newaxis]
-        nlogbeta = psi(vkw) - psi(vkw.sum(1))[:,np.newaxis]
+        nlogtheta = (psi(vmk) - psi(vmk.sum(1))[:,np.newaxis])
+        nlogbeta = (psi(vkw) - psi(vkw.sum(1))[:,np.newaxis])
         # Calculate likelihood
         lik = 0
-        lik += (mbeta_vmk * nlogtheta * (vmk - 1)).sum()
-        lik += (mbeta_vkw * nlogbeta * (vkw - 1)).sum()
-        lik -= num_docs * np.log(multinomial_beta(self.alpha))
-        lik -= num_topics * np.log(multinomial_beta(self.eta))
+        lik += (nlogtheta * (vmk - 1)).sum()
+        lik += (nlogbeta * (vkw - 1)).sum()
+        lik -= num_docs * log_multinomial_beta(self.alpha)
+        lik -= num_topics * log_multinomial_beta(self.eta)
         return lik
     
     def topic_conditional(self, m, w, stats):
