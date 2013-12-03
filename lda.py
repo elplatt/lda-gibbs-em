@@ -32,19 +32,20 @@ def sample(dist):
     uniform = nprand.random_sample()
     return next(n for n in range(0, len(cdf)) if cdf[n] > uniform)
 
-def polya_iteration(ndm, nd, guess, iter=5):
+def polya_iteration(ndm, nd, guess, rtol=1e-7, max_iter=25):
     '''Estimate the parameter of a dirichlet-multinomial distribution
     with num_dir draws from the dirichlet and num_out possible outcomes.
     
     :param ndm: Counts as (num_dir, num_out) array
     :param nd: Counts as (num_dir) array
     :param guess: Initial guess for dirichlet parameter
-    :param iter: Number of iterations to perform, default 5
+    :param rtol: Relative tolerance to achieve before stopping
+    :param max_iter: Maximum number of iterations to allow
     :returns: An updated estimate of the dirichlet parameter
     '''
     num_dir, num_out = ndm.shape
     param = guess
-    for i in range(iter):
+    for i in range(max_iter):
         # Heinrich2005 Eq. 83
         # Minka2000 Eq. 55
         new = np.zeros(num_out)
@@ -60,9 +61,12 @@ def polya_iteration(ndm, nd, guess, iter=5):
             new[m] /= den
             new[m] *= param[m]
             if new[m] <= 0:
-                new[m] = 1e-5
-        # rel_change = np.abs((new-param)).sum()/new.sum()
+                new[m] = 1e-9
+        rel_change = np.abs((new-param)).sum()/new.sum()
+        if (rel_change < rtol):
+            return new
         param = new
+    print 'Warning: reached %d polya iterations with rtol %f > %f' % (max_iter, rel_change, rtol)
     return param
 
 def log_multinomial_beta(a, axis=0):
