@@ -69,6 +69,27 @@ def polya_iteration(ndm, nd, guess, rtol=1e-7, max_iter=25):
     print 'Warning: reached %d polya iterations with rtol %f > %f' % (max_iter, rel_change, rtol)
     return param
 
+def estimate_dirichlet_newton(alpha, nlogtheta, rtol=1e-7, max_iter=30):
+    '''Estimate parameters of a dirichlet distribuiton using Newton's method.'''
+    M = nlogtheta.shape[0]
+    psi = spspecial.psi
+    polyg = spspecial.polygamma
+    for i in range(max_iter):
+        old = alpha
+        sumalpha = sum(alpha)
+        g = -M*psi(alpha) + M*psi(sumalpha) + nlogtheta
+        q = -M*polyg(1,alpha)
+        qa = M*polyg(1,sumalpha)
+        b = sum(g / q) / (1/qa + sum(1/q))
+        alpha = alpha - (g - b) / q
+        for i in [i for i, ak in enumerate(alpha) if ak <= 0.0]:
+            alpha[i] = 1e-3 / alpha.sum()
+        rel_change = numpy.abs(alpha - old).sum()/alpha.sum()
+        if rel_change < rtol:
+            return alpha
+    print 'Warning: reached %d newton iterations with rtol %f > %f' % (max_iter, rel_change, rtol)
+    return alpha
+
 def log_multinomial_beta(a, axis=0):
     '''Log of multinomial beta function along a given axis (default 0).'''
     return spspecial.gammaln(a).sum(axis) - spspecial.gammaln(a.sum(axis))
@@ -272,6 +293,11 @@ class LdaModel(object):
             stats['nkw'][k][w] += 1
             stats['nk'][k] += 1
             stats['topics'][(m, i)] = (w, k)
+        psi = spspecial.psi
+        stats['nlogtheta'] = psi(self.alpha + stats['nmk'])
+        stats['nlogtheta'] -= psi(self.alpha.sum() + stats['nm'])[:,np.newaxis]
+        stats['nlogbeta'] = psi(self.eta + stats['nkw'])
+        stats['nlogbeta'] -= psi(self.eta.sum() - stats['nk'])[:,np.newaxis]
     
     def _m_alpha(self, iter=5):
         '''Find a new estimate for alpha that maximizes likelihood.
@@ -280,7 +306,7 @@ class LdaModel(object):
         '''
         ndm = self.stats['nmk']
         nd = self.stats['nm']
-        self.alpha = polya_iteration(ndm, nd, self.alpha, iter)
+        self.eta = polya_iteration(ndm, nd, self.alpha, iter)
         
     def _m_eta(self, iter=5):
         '''Find a new estimate for alpha that maximizes likelihood.
@@ -300,13 +326,10 @@ class LdaModel(object):
         # Virtual word and topic counts
         vmk = self.alpha + stats['nmk']
         vkw = self.eta + stats['nkw']
-        # Expected value of multinomial components
-        nlogtheta = (psi(vmk) - psi(vmk.sum(1))[:,np.newaxis])
-        nlogbeta = (psi(vkw) - psi(vkw.sum(1))[:,np.newaxis])
         # Calculate likelihood
         lik = 0
-        lik += (nlogtheta * (vmk - 1)).sum()
-        lik += (nlogbeta * (vkw - 1)).sum()
+        lik += (stats['nlogtheta'] * (vmk - 1)).sum()
+        lik += (stats['nlogbeta'] * (vkw - 1)).sum()
         lik -= num_docs * log_multinomial_beta(self.alpha)
         lik -= num_topics * log_multinomial_beta(self.eta)
         return lik

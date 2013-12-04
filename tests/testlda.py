@@ -309,10 +309,12 @@ class LdaEmTest(unittest.TestCase):
         self.model = lda.LdaModel(corpus, num_topics, stub_alpha, stub_eta)
         self.model.stats = stats
     
-    def test_m_alpha(self):
+    def test_polya_estimate(self):
         new_alpha = np.array([0.1*42.63, 0.2*18.5, 0.3*12.42]) / 12.83
-        self.model._m_alpha(1)
-        nptest.assert_allclose(self.model.alpha, new_alpha, rtol=1e-2)
+        ndm = self.model.stats['nmk']
+        nd = self.model.stats['nm']
+        alpha = lda.polya_iteration(ndm, nd, self.model.alpha, iter)        
+        nptest.assert_allclose(alpha, new_alpha, rtol=1e-2)
 
 if __name__ == '__main__':
     unittest.main()
