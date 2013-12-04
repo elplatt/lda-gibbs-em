@@ -72,6 +72,7 @@ def polya_iteration(ndm, nd, guess, rtol=1e-7, max_iter=25):
 def estimate_dirichlet_newton(alpha, nlogtheta, rtol=1e-7, max_iter=30):
     '''Estimate parameters of a dirichlet distribuiton using Newton's method.'''
     M = nlogtheta.shape[0]
+    nlogtheta = nlogtheta.sum(0)
     psi = spspecial.psi
     polyg = spspecial.polygamma
     for i in range(max_iter):
@@ -84,7 +85,7 @@ def estimate_dirichlet_newton(alpha, nlogtheta, rtol=1e-7, max_iter=30):
         alpha = alpha - (g - b) / q
         for i in [i for i, ak in enumerate(alpha) if ak <= 0.0]:
             alpha[i] = 1e-3 / alpha.sum()
-        rel_change = numpy.abs(alpha - old).sum()/alpha.sum()
+        rel_change = np.abs(alpha - old).sum()/alpha.sum()
         if rel_change < rtol:
             return alpha
     print 'Warning: reached %d newton iterations with rtol %f > %f' % (max_iter, rel_change, rtol)
@@ -255,6 +256,11 @@ class LdaModel(object):
                 stats['nkw'][k][w] += 1
                 stats['nk'][k] += 1
                 stats['topics'][(m, i)] = (w, k)
+        psi = spspecial.psi
+        stats['nlogtheta'] = psi(self.alpha + stats['nmk'])
+        stats['nlogtheta'] -= psi(self.alpha.sum() + stats['nm'])[:,np.newaxis]
+        stats['nlogbeta'] = psi(self.eta + stats['nkw'])
+        stats['nlogbeta'] -= psi(self.eta.sum() + stats['nk'])[:,np.newaxis]
         return stats
     
     def _gibbs_sample(self, stats):
@@ -297,25 +303,23 @@ class LdaModel(object):
         stats['nlogtheta'] = psi(self.alpha + stats['nmk'])
         stats['nlogtheta'] -= psi(self.alpha.sum() + stats['nm'])[:,np.newaxis]
         stats['nlogbeta'] = psi(self.eta + stats['nkw'])
-        stats['nlogbeta'] -= psi(self.eta.sum() - stats['nk'])[:,np.newaxis]
+        stats['nlogbeta'] -= psi(self.eta.sum() + stats['nk'])[:,np.newaxis]
     
-    def _m_alpha(self, iter=5):
+    def _m_alpha(self):
         '''Find a new estimate for alpha that maximizes likelihood.
         
         :param iter: The number of iterations to perform, defaults to 5
         '''
-        ndm = self.stats['nmk']
-        nd = self.stats['nm']
-        self.alpha = polya_iteration(ndm, nd, self.alpha, iter)
+        nlogtheta = self.stats['nlogtheta']
+        self.alpha = estimate_dirichlet_newton(self.alpha, nlogtheta)
         
-    def _m_eta(self, iter=5):
+    def _m_eta(self):
         '''Find a new estimate for alpha that maximizes likelihood.
         
         :param iter: The number of iterations to perform, defaults to 5
         '''
-        ndm = self.stats['nkw']
-        nd = self.stats['nk']
-        self.eta = polya_iteration(ndm, nd, self.eta, iter)
+        nlogbeta = self.stats['nlogbeta']
+        self.eta = estimate_dirichlet_newton(self.eta, nlogbeta)
     
     def expected_log_likelihood(self):
         '''Expected (p(theta,beta|gibbs_z)) log likelihood of model.'''
