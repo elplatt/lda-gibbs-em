@@ -338,6 +338,24 @@ class LdaModel(object):
         lik -= num_topics * log_multinomial_beta(self.eta)
         return lik
     
+    def expected_log_likelihood_components(self):
+        '''Expected (p(theta,beta|gibbs_z)) log likelihood of model.'''
+        stats = self.stats
+        psi = spspecial.psi
+        num_topics = stats['nkw'].shape[0]
+        num_docs = stats['nmk'].shape[0]
+        # Virtual word and topic counts
+        vmk = self.alpha + stats['nmk']
+        vkw = self.eta + stats['nkw']
+        # Calculate likelihood
+        lik = np.array([
+            (stats['nlogtheta'] * (vmk - 1)).sum()
+            , (stats['nlogbeta'] * (vkw - 1)).sum()
+            , num_docs * log_multinomial_beta(self.alpha)
+            , num_topics * log_multinomial_beta(self.eta)
+        ])
+        return lik
+    
     def topic_conditional(self, m, w, stats):
         '''Distribution of a single topic given others and words.
         
