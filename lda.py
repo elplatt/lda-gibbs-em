@@ -61,7 +61,7 @@ def polya_iteration(ndm, nd, guess, rtol=1e-7, max_iter=25):
             new[m] /= den
             new[m] *= param[m]
             if new[m] <= 0:
-                new[m] = 1e-9
+                new[m] = 1e-3/param[m].sum()
         rel_change = np.abs((new-param)).sum()/new.sum()
         if (rel_change < rtol):
             return new
