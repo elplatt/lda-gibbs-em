@@ -306,7 +306,7 @@ class LdaModel(object):
         '''
         ndm = self.stats['nmk']
         nd = self.stats['nm']
-        self.eta = polya_iteration(ndm, nd, self.alpha, iter)
+        self.alpha = polya_iteration(ndm, nd, self.alpha, iter)
         
     def _m_eta(self, iter=5):
         '''Find a new estimate for alpha that maximizes likelihood.
