@@ -24,7 +24,7 @@ NUM_ITER = 25
 GIBBS_BURN = 5
 GIBBS_LAG = 5
 
-alpha = 0.2*np.ones(NUM_TOPICS)
+alpha = 0.001*np.ones(NUM_TOPICS)
 eta = 0.5*np.ones(VOCAB_SIZE)
 
 id = time.time()
@@ -36,26 +36,26 @@ def main():
     corpus, beta = generate_corpus()
     # Add real topics to the image
     add_to_img(topic_img, NUM_ITER+1, beta, beta)
-    alpha_guess = 0.5
+    alpha_guess = 0.001
     eta_guess = 0.5
     print 'Initializing model'
     model = lda.LdaModel(corpus, NUM_TOPICS, alpha_guess, eta_guess, GIBBS_BURN, GIBBS_LAG)
     add_to_img(topic_img, 0, beta, model.beta())
     # Do E-M iterations
-    last_lik = model.expected_log_likelihood()
+    last_lik = model.log_likelihood_wz()
     for i in range(NUM_ITER):
         print 'Iteration %d' % i
         model.e_step()
-        lik = model.expected_log_likelihood()
+        lik = model.log_likelihood_wz()
         print ' E-step ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
         model._m_alpha()
-        lik = model.expected_log_likelihood()
+        lik = model.log_likelihood_wz()
         print ' M-step(alpha) ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
         model._m_eta()
         add_to_img(topic_img, i+1, beta, model.beta())
-        lik = model.expected_log_likelihood()
+        lik = model.log_likelihood_wz()
         print ' M-step(eta) ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
     save_topics(topic_img)

@@ -30,7 +30,11 @@ def sample(dist):
     '''
     cdf = np.cumsum(dist)
     uniform = nprand.random_sample()
-    return next(n for n in range(0, len(cdf)) if cdf[n] > uniform)
+    try:
+        result = next(n for n in range(0, len(cdf)) if cdf[n] > uniform)
+    except StopIteration:
+        print "%f %f" % (cdf[len(dist)-1], uniform)
+    return result
 
 def polya_iteration(ndm, nd, guess, rtol=1e-7, max_iter=25):
     '''Estimate the parameter of a dirichlet-multinomial distribution
@@ -322,7 +326,7 @@ class LdaModel(object):
         self.eta = estimate_dirichlet_newton(self.eta, nlogbeta)
     
     def expected_log_likelihood(self):
-        '''Expected (p(theta,beta|gibbs_z)) log likelihood of model.'''
+        '''Expected (p(theta,beta|gibbs_z)) complete log likelihood.'''
         stats = self.stats
         psi = spspecial.psi
         num_topics = stats['nkw'].shape[0]
@@ -338,8 +342,19 @@ class LdaModel(object):
         lik -= num_topics * log_multinomial_beta(self.eta)
         return lik
     
+    def log_likelihood_wz(self):
+        '''The log likelihood of the data and topic assignments.'''
+        # Heinrich2005 Eq. 73
+        num_docs = self.stats['nmk'].shape[0]
+        lik = 0
+        lik += log_multinomial_beta(self.stats['nkw'] + self.eta).sum()
+        lik -= self.num_topics * log_multinomial_beta(self.eta)
+        lik += log_multinomial_beta(self.stats['nmk'] + self.alpha).sum()
+        lik -= num_docs * log_multinomial_beta(self.alpha)
+        return lik
+    
     def expected_log_likelihood_components(self):
-        '''Expected (p(theta,beta|gibbs_z)) log likelihood of model.'''
+        '''Expected (p(theta,beta|gibbs_z)) complete log likelihood.'''
         stats = self.stats
         psi = spspecial.psi
         num_topics = stats['nkw'].shape[0]
