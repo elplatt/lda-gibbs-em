@@ -16,16 +16,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 import lda
 
-VOCAB_SIZE = 25
-NUM_TOPICS = 10
+VOCAB_SIZE = 100
+NUM_TOPICS = 25
 NUM_DOCS = 100
 DOC_LENGTH = 100
-NUM_ITER = 25
-GIBBS_BURN = 5
-GIBBS_LAG = 5
+NUM_ITER = 100
+GIBBS_BURN = 20
+GIBBS_LAG = 4
 
-alpha = 0.001*np.ones(NUM_TOPICS)
-eta = 0.5*np.ones(VOCAB_SIZE)
+alpha = 0.1*np.ones(NUM_TOPICS)
+eta = 0.1*np.ones(VOCAB_SIZE)
 
 id = time.time()
 
@@ -36,13 +36,14 @@ def main():
     corpus, beta = generate_corpus()
     # Add real topics to the image
     add_to_img(topic_img, NUM_ITER+1, beta, beta)
-    alpha_guess = 0.001
+    alpha_guess = 0.5
     eta_guess = 0.5
     print 'Initializing model'
     model = lda.LdaModel(corpus, NUM_TOPICS, alpha_guess, eta_guess, GIBBS_BURN, GIBBS_LAG)
     add_to_img(topic_img, 0, beta, model.beta())
     # Do E-M iterations
     last_lik = model.log_likelihood_wz()
+    likelihoods = [(0, last_lik)]
     for i in range(NUM_ITER):
         print 'Iteration %d' % i
         model.e_step()
@@ -58,6 +59,8 @@ def main():
         lik = model.log_likelihood_wz()
         print ' M-step(eta) ML: %f (%f)' % (lik, lik - last_lik)
         last_lik = lik
+        likelihoods.append((i+1,lik))
+    save_likelihoods(likelihoods)
     save_topics(topic_img)
 
 def generate_corpus():
@@ -99,5 +102,20 @@ def save_topics(topic_img):
     topic_img = np.kron(topic_img, np.ones((5,5)))
     spmisc.imsave(filename, topic_img)
 
+def save_likelihoods(likelihoods):
+    try:
+        os.stat('output')
+    except OSError:
+        os.mkdir('output')
+    try:
+        os.stat('output/demoldaem')
+    except OSError:
+        os.mkdir('output/demoldaem')
+    filename = 'output/demoldaem/%s.csv' % (id)
+    with open(filename, 'wb') as f:
+        f.write("iteration, log likelihood\n")
+        for l in likelihoods:
+            f.write("%d, %f\n" % l)
+    
 if __name__ == '__main__':
     main()
