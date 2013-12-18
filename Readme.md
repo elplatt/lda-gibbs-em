@@ -3,8 +3,8 @@
 An LDA with Gibbs sampling implementation based on
 "Parameter estimation for text analysis" by Gregor Heinrich.
 
-Copyright 2013 MIT Center for Civic Media
-BSD 3-clause license, see LICENSE for info
+Copyright 2013 MIT Center for Civic Media 
+Distributed under BSD 3-Clause License, see LICENSE for info
 
 ## Dependencies
 
